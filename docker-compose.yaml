@@ -1,0 +1,27 @@
+version: "2.2"
+
+services:
+
+  app:
+    image: "localhost/java-container-bootstrap/app:latest"
+    ports:
+      - "8080:8080"# listen port for the app server
+      - "8000:8000"# listen port for remote debug
+      - "9000:9000"# listen port for JMX remote access
+    restart: unless-stopped
+    mem_limit: 1GB
+    cpu_count: 2
+    depends_on: []
+    environment:
+      JAVA_TOOL_OPTIONS: >
+        -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:8000
+        -Dcom.sun.management.jmxremote=true
+        -Dcom.sun.management.jmxremote.authenticate=false
+        -Dcom.sun.management.jmxremote.ssl=false
+        -Dcom.sun.management.jmxremote.local.only=false
+        -Dcom.sun.management.jmxremote.port=9000
+        -Dcom.sun.management.jmxremote.rmi.port=9000
+        -Djava.rmi.server.hostname=0.0.0.0
+        -XX:-PrintCommandLineFlags
+        -XX:StartFlightRecording=name=background,maxsize=100m
+      SERVER_PORT: "8080"

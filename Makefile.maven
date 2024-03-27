@@ -1,0 +1,66 @@
+MVN               := ./mvnw
+MAVEN_ARGS        := $(MAVEN_ARGS) --no-transfer-progress
+MAVEN_ARTIFACT_ID := $(shell $(MVN) $(MAVEN_ARGS) --quiet help:evaluate -DforceStdout -Dexpression=project.artifactId)
+MAVEN_APP_VERSION := $(shell $(MVN) $(MAVEN_ARGS) --quiet help:evaluate -DforceStdout -Dexpression=project.version)
+MAVEN_JDK_VERSION := $(shell $(MVN) $(MAVEN_ARGS) --quiet help:evaluate -DforceStdout -Dexpression=maven.compiler.target)
+
+ifdef SILENT
+	MAVEN_ARGS := $(MAVEN_ARGS) --quiet
+endif
+
+.PHONY: app/deps
+##	Download all required dependencies
+app/deps:
+	$(MVN) $(MAVEN_ARGS) dependency:go-offline
+
+.PHONY: app
+##	Build the target/app.jar
+app:
+	$(MVN) $(MAVEN_ARGS) package -DskipTests
+	install --mode=444 "target/$(MAVEN_ARTIFACT_ID)-$(MAVEN_APP_VERSION).jar" "target/app.jar"
+
+.PHONY: app/test
+##	Execute Unit Tests
+app/test:
+	$(MVN) $(MAVEN_ARGS) test
+
+.PHONY: app/IT
+##	Execute Unit Tests and Integration Tests
+app/IT:
+	$(MVN) $(MAVEN_ARGS) verify
+
+.PHONY: app/classpath
+app/classpath:
+	$(MVN) $(MAVEN_ARGS) dependency:build-classpath -DincludeScope=compile -Dmdep.outputFile="./target/class.path"
+
+.PHONY: app/jre/modules
+app/jre/modules: app app/classpath
+	$(eval CLASSPATH=$(shell cat "./target/class.path"))
+ifndef CLASSPATH
+	jdeps \
+		--multi-release base \
+		--ignore-missing-deps \
+		--print-module-deps \
+		"target/app.jar" > "./target/jre.modules"
+else
+	jdeps \
+		--class-path "$(CLASSPATH)" \
+		--multi-release base \
+		--ignore-missing-deps \
+		--print-module-deps \
+		"target/app.jar" > "./target/jre.modules"
+endif
+
+.PHONY: app/jre
+##	Build smallest JRE able to run the app, including utilities (JDWP, JMX, JFR)
+app/jre: app/jre/modules
+	$(eval JRE_MODULES="$(shell cat "./target/jre.modules"),jdk.jdwp.agent,jdk.jfr,jdk.management.jfr,jdk.management.agent")
+	jlink \
+		--strip-debug \
+		--output "target/jre" \
+		--add-modules $(JRE_MODULES)
+
+.PHONY: app/clean
+##	Clean the target directory
+app/clean:
+	$(RM) -r target

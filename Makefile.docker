@@ -1,0 +1,60 @@
+##	Name of the container image registry, default 'localhost'
+DOCKER_REGISTRY               ?= localhost
+##	Name of the container image project known by the registry, default is the name of the parent directory
+DOCKER_PROJECT                ?= $(shell basename $(shell readlink -f $(shell dirname .)))
+##	Name of the container image, default value is 'app'
+DOCKER_IMAGE_NAME             ?= app
+DOCKER_IMAGE_VERSION          ?= current
+DOCKER_BASE_IMAGE_JDK_VERSION ?= $(shell cat "./.java-version")
+
+DOCKER := $(shell command -v podman 2>/dev/null)
+ifndef DOCKER
+	DOCKER := $(shell command -v docker 2>/dev/null)
+endif
+ifndef DOCKER
+	DOCKER := docker
+endif
+
+DOCKER_COMPOSE := $(shell command -v podman-compose 2>/dev/null)
+ifndef DOCKER_COMPOSE
+	DOCKER_COMPOSE := $(shell command -v docker-compose 2>/dev/null)
+endif
+ifndef DOCKER_COMPOSE
+	DOCKER_COMPOSE := docker-compose
+endif
+
+ifdef SILENT
+	DOCKER_BUILD_FLAGS := --quiet
+endif
+
+.PHONY: docker/image
+##	Build Docker compatible container image
+docker/image:
+	$(DOCKER) build $(DOCKER_BUILD_FLAGS) . \
+		--build-arg JDK_VERSION=$(DOCKER_BASE_IMAGE_JDK_VERSION) \
+		--build-arg MAKEFLAGS=$(MAKEFLAGS) \
+		--tag $(DOCKER_REGISTRY)/$(DOCKER_PROJECT)/$(DOCKER_IMAGE_NAME):$(DOCKER_IMAGE_VERSION) \
+		--tag $(DOCKER_REGISTRY)/$(DOCKER_PROJECT)/$(DOCKER_IMAGE_NAME):latest
+
+.PHONY: docker/push
+##	Publish Docker compatible container image
+docker/push:
+	$(eval LATEST_VERSION=$(shell podman image ls $(DOCKER_REGISTRY)/$(DOCKER_PROJECT)/$(DOCKER_IMAGE_NAME):latest --format="{{ .Tag }}" | grep -v 'latest'))
+	$(DOCKER) push $(DOCKER_REGISTRY)/$(DOCKER_PROJECT)/$(DOCKER_IMAGE_NAME):$(LATEST_VERSION)
+	$(DOCKER) push $(DOCKER_REGISTRY)/$(DOCKER_PROJECT)/$(DOCKER_IMAGE_NAME):latest
+
+.PHONY: docker/up
+##	Start the stack locally (using Compose)
+docker/up:
+	$(DOCKER_COMPOSE) up --detach
+
+.PHONY: docker/down
+##	Stop the stack locally (using Compose)
+docker/down:
+	$(DOCKER_COMPOSE) down
+
+.PHONY: docker/clean
+##	Clean up docker images
+docker/clean:
+	$(DOCKER) image rm $(DOCKER_REGISTRY)/$(DOCKER_PROJECT)/$(DOCKER_IMAGE_NAME):latest
+	$(DOCKER) image rm $(shell $(DOCKER) image ls --quiet $(DOCKER_REGISTRY)/$(DOCKER_PROJECT)/$(DOCKER_IMAGE_NAME))
