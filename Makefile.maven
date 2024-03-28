@@ -17,7 +17,7 @@ app/deps:
 ##	Build the target/app.jar
 app:
 	$(MVN) $(MAVEN_ARGS) package -DskipTests
-	install --mode=444 "target/$(MAVEN_ARTIFACT_ID)-$(MAVEN_APP_VERSION).jar" "target/app.jar"
+	install --mode=444 "target/$(MAVEN_ARTIFACT_ID)-$(MAVEN_APP_VERSION)-standalone.jar" "target/app.jar"
 
 .PHONY: app/test
 ##	Execute Unit Tests
@@ -35,21 +35,18 @@ app/classpath:
 
 .PHONY: app/jre/modules
 app/jre/modules: app app/classpath
-	$(eval CLASSPATH=$(shell cat "./target/class.path"))
-ifndef CLASSPATH
-	jdeps \
-		--multi-release base \
-		--ignore-missing-deps \
-		--print-module-deps \
-		"target/app.jar" > "./target/jre.modules"
-else
-	jdeps \
-		--class-path "$(CLASSPATH)" \
-		--multi-release base \
-		--ignore-missing-deps \
-		--print-module-deps \
-		"target/app.jar" > "./target/jre.modules"
-endif
+	test -f ./target/class.path \
+		&& jdeps \
+			--class-path "$(shell cat "./target/class.path")" \
+			--multi-release base \
+			--ignore-missing-deps \
+			--print-module-deps \
+			"target/app.jar" > "./target/jre.modules" \
+		|| jdeps \
+			--multi-release base \
+			--ignore-missing-deps \
+			--print-module-deps \
+			"target/app.jar" > "./target/jre.modules"
 
 .PHONY: app/jre
 ##	Build smallest JRE able to run the app, including utilities (JDWP, JMX, JFR)

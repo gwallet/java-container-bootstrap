@@ -1,47 +1,42 @@
 package kawa.it;
 
-import kawa.junit.HttpServerExtension;
-import kawa.junit.HttpServerExtension.ServerURI;
-import org.junit.jupiter.api.AfterEach;
+import kawa.Application;
+import kawa.it.api.HelloApiClient;
+import okhttp3.HttpUrl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpRequest.BodyPublishers;
-import java.net.http.HttpResponse;
-import java.net.http.HttpResponse.BodyHandlers;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.scalars.ScalarsConverterFactory;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@ExtendWith(HttpServerExtension.class)
+@SpringBootTest(
+  classes = Application.class,
+  webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT
+)
 class ITWorks {
 
-  @ServerURI URI uri;
-  HttpClient api;
+  @Autowired ServletWebServerApplicationContext webServerApplicationContext;
+  HelloApiClient api;
 
   @BeforeEach void setUp() {
-    api = HttpClient.newBuilder().build();
-  }
-
-  @AfterEach void tearDown() {
-    api.close();
+    int port = webServerApplicationContext.getWebServer().getPort();
+    Retrofit retrofit = new Retrofit.Builder().baseUrl(HttpUrl.get("http://localhost:" + port))
+                                              .addConverterFactory(ScalarsConverterFactory.create())
+                                              .build();
+    api = retrofit.create(HelloApiClient.class);
   }
 
   @Test void should_greet_names_in_query_param() throws Exception {
-    //  Given
-    HttpRequest request = HttpRequest.newBuilder()
-                                     .method("GET", BodyPublishers.noBody())
-                                     .uri(uri.resolve("/hello?name=World&name=Monde&name=Welt"))
-                                     .build();
-
     //  When
-    HttpResponse<String> response = api.send(request, BodyHandlers.ofString());
+    Response<String> response = api.greet("World", "Monde", "Welt").execute();
 
     //  Then
-    assertThat(response.statusCode())
+    assertThat(response.code())
       .isEqualTo(200);
     assertThat(response.body())
       .isEqualTo(
