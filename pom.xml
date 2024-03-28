@@ -12,6 +12,7 @@
   <packaging>jar</packaging>
 
   <properties>
+    <dependencies.spring-boot.version>3.2.4</dependencies.spring-boot.version>
     <java.version>21</java.version>
     <maven.compiler.source>${java.version}</maven.compiler.source>
     <maven.compiler.target>${java.version}</maven.compiler.target>
@@ -23,16 +24,30 @@
   <dependencyManagement>
     <dependencies>
       <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-dependencies</artifactId>
+        <version>${dependencies.spring-boot.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
         <groupId>org.junit</groupId>
         <artifactId>junit-bom</artifactId>
-        <version>5.10.0</version>
+        <version>5.10.2</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
       <dependency>
         <groupId>org.assertj</groupId>
         <artifactId>assertj-bom</artifactId>
-        <version>3.24.2</version>
+        <version>3.25.3</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>com.squareup.retrofit2</groupId>
+        <artifactId>retrofit-bom</artifactId>
+        <version>2.10.0</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -41,10 +56,24 @@
 
   <dependencies>
     <!-- Compile Dependencies -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
 
     <!-- Runtime Dependencies -->
 
     <!-- Optional Dependencies -->
+    <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-actuator</artifactId>
+      <optional>true</optional>
+    </dependency>
 
     <!-- Test Dependencies -->
     <dependency>
@@ -55,6 +84,21 @@
     <dependency>
       <groupId>org.assertj</groupId>
       <artifactId>assertj-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.squareup.retrofit2</groupId>
+      <artifactId>retrofit</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.squareup.retrofit2</groupId>
+      <artifactId>converter-scalars</artifactId>
       <scope>test</scope>
     </dependency>
 	</dependencies>
@@ -151,6 +195,21 @@
           <artifactId>maven-jar-plugin</artifactId>
           <version>3.3.0</version>
         </plugin>
+        <plugin>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-maven-plugin</artifactId>
+          <version>${dependencies.spring-boot.version}</version>
+          <executions>
+            <execution>
+              <goals>
+                <goal>repackage</goal>
+              </goals>
+              <configuration>
+                <classifier>standalone</classifier>
+              </configuration>
+            </execution>
+          </executions>
+        </plugin>
       </plugins>
     </pluginManagement>
 
@@ -186,15 +245,8 @@
         <artifactId>maven-failsafe-plugin</artifactId>
       </plugin>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-jar-plugin</artifactId>
-        <configuration>
-          <archive>
-            <manifest>
-              <mainClass>kawa.Application</mainClass>
-            </manifest>
-          </archive>
-        </configuration>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
       </plugin>
     </plugins>
 
